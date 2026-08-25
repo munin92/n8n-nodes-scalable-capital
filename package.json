@@ -1,0 +1,57 @@
+{
+  "name": "n8n-nodes-scalable-capital",
+  "version": "0.1.0",
+  "description": "n8n community node for Scalable Capital via its official MCP endpoint. Read-only by design.",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "scalable-capital",
+    "mcp",
+    "finance",
+    "broker"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/munin92/n8n-nodes-scalable-capital",
+  "author": {
+    "name": "munin92"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/munin92/n8n-nodes-scalable-capital.git"
+  },
+  "main": "index.js",
+  "engines": {
+    "node": ">=20.15"
+  },
+  "scripts": {
+    "build": "tsc && node scripts/copy-icons.mjs",
+    "dev": "tsc --watch",
+    "lint": "eslint nodes credentials --ext .ts && eslint package.json --no-eslintrc --config .eslintrc.package.js",
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "prepublishOnly": "npm run build && npm run lint && npm test"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/ScalableCapitalMcpApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/ScalableCapital/ScalableCapital.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.3",
+    "jsonc-eslint-parser": "^3.3.0",
+    "n8n-workflow": "*",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
