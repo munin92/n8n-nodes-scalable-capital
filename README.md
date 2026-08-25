@@ -99,6 +99,13 @@ Verified so far: TypeScript build, n8n community lint rules, and unit tests over
 the Streamable-HTTP response parser (plain JSON, SSE, interleaved progress
 notifications, JSON-RPC errors).
 
+End-to-end in n8n 2.35.7 against a stub MCP server: the credential injects the
+bearer token, the session id from `initialize` is carried on every later call,
+SSE `tools/list` is parsed past an interleaved progress notification, and
+`structuredContent` is unwrapped. The write guard was verified the only way that
+counts — the stub recorded **zero** `tools/call` requests when a non-read-only
+tool was invoked without the opt-in.
+
 **Not yet verified against a live account** — that needs a token, which only the
 account holder can obtain. If you run it, issue reports are welcome, especially
 about the shape of `tools/call` results.

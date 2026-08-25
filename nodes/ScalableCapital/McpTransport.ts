@@ -10,6 +10,7 @@ export class McpSession {
 	private sessionId?: string;
 	private nextId = 1;
 	private initialised = false;
+	private toolCache?: McpTool[];
 
 	private ctx: IExecuteFunctions | ILoadOptionsFunctions;
 	private url: string;
@@ -65,7 +66,9 @@ export class McpSession {
 		await this.rpc('notifications/initialized', undefined, true);
 	}
 
+	/** Cached: the read-only gate asks for the catalogue on every item. */
 	async listTools(): Promise<McpTool[]> {
+		if (this.toolCache) return this.toolCache;
 		await this.init();
 		const tools: McpTool[] = [];
 		let cursor: string | undefined;
@@ -74,6 +77,7 @@ export class McpSession {
 			tools.push(...((result.tools as McpTool[]) ?? []));
 			cursor = result.nextCursor as string | undefined;
 		} while (cursor);
+		this.toolCache = tools;
 		return tools;
 	}
 

@@ -1,0 +1,14 @@
+{
+  "node": "n8n-nodes-base.scalableCapital",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": ["Finance & Accounting"],
+  "resources": {
+    "primaryDocumentation": [
+      { "url": "https://github.com/munin92/n8n-nodes-scalable-capital" }
+    ],
+    "credentialDocumentation": [
+      { "url": "https://github.com/munin92/n8n-nodes-scalable-capital" }
+    ]
+  }
+}
