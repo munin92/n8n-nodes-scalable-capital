@@ -84,13 +84,19 @@ Request `offline_access` so the token can be refreshed.
 
 ## Install
 
-In n8n: **Settings → Community nodes → Install**, then `n8n-nodes-scalable-capital`.
+The package is **scoped on purpose**. An unscoped `n8n-nodes-*` name is free for
+anyone to register on npm, and this repository is public — so the name is known
+before it is claimed. A config that installs an unclaimed name from the public
+registry hands the instance to whoever registers it first. A scope belongs to the
+account and cannot be taken.
+
+In n8n: **Settings → Community nodes → Install**, then `@munin92/n8n-nodes-scalable-capital`.
 
 Manually:
 
 ```bash
 cd ~/.n8n/nodes
-npm install n8n-nodes-scalable-capital
+npm install @munin92/n8n-nodes-scalable-capital
 ```
 
 ## Status
