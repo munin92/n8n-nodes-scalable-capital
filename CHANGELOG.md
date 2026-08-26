@@ -1,3 +1,10 @@
+## [0.1.4](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.1.3...v0.1.4) (2026-08-26)
+
+
+### Bug Fixes
+
+* Node laedt nicht, wenn im nodes-Verzeichnis eine aeltere n8n-workflow-Kopie liegt ([0a19c55](https://github.com/munin92/n8n-nodes-scalable-capital/commit/0a19c55d251342cd39a3a3c925a501264d161d89))
+
 ## [0.1.3](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.1.2...v0.1.3) (2026-08-26)
 
 
