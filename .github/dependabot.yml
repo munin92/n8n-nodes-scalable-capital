@@ -1,0 +1,54 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    # chore statt fix/feat: semantic-release veroeffentlicht sonst bei jedem
+    # gemergten Dependabot-PR eine neue Version.
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    groups:
+      # Zusammen anheben, sonst passt die Peer-Bindung nicht mehr - siehe ignore.
+      n8n-lint:
+        patterns:
+          - "@n8n/eslint-plugin-community-nodes"
+          - typescript-eslint
+      semantic-release:
+        patterns:
+          - semantic-release
+          - "@semantic-release/*"
+    ignore:
+      # @n8n/eslint-plugin-community-nodes fordert eslint EXAKT 9.29.0 als Peer.
+      # Ein Bump auf 9.39.5 liess `npm install` durch und brach `npm ci` in der
+      # CI (2026-08-26). Eslint zieht nur mit, wenn das Plugin es verlangt.
+      - dependency-name: eslint
+      # peerDependency mit "*": die Version kommt von der n8n-Instanz, die die
+      # Node laedt. Ein Pin hier wuerde eine Erwartung festschreiben, die das
+      # Paket gar nicht stellen darf.
+      - dependency-name: n8n-workflow
+      # TypeScript 7 ist die native Go-Portierung und bricht Werkzeuge, die an
+      # der Compiler-API haengen. Bis 6 mitgehen, 7 nicht.
+      - dependency-name: typescript
+        versions: [">=7"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]
