@@ -8,16 +8,16 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-# Auf Workflow-Ebene, damit `if: env.NPM_TOKEN != ''` in den Schritten greift -
-# im Job-`if` ist der secrets-Kontext nicht verfuegbar.
+# Nur ein Ja/Nein auf Workflow-Ebene, nicht das Geheimnis selbst: sonst laege
+# der npm-Token in der Umgebung JEDES Schritts, auch beim `npm ci`, das die
+# install-Skripte aller Abhaengigkeiten ausfuehrt.
 env:
-  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-  id-token: write
+  contents: write # Tags, Releases, der Release-Commit
+  issues: write # @semantic-release/github kommentiert erledigte Issues
+  pull-requests: write # dasselbe fuer PRs
 
 jobs:
   release:
@@ -31,20 +31,22 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          registry-url: https://registry.npmjs.org
+          # Bewusst ohne registry-url: das schriebe eine .npmrc mit
+          # ${NODE_AUTH_TOKEN}, die mit der von @semantic-release/npm kollidiert.
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm test
       - run: npm run build
       - name: Release
-        if: env.NPM_TOKEN != ''
+        if: env.HAS_NPM_TOKEN == 'true'
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Kein NPM_TOKEN hinterlegt
-        if: env.NPM_TOKEN == ''
+        if: env.HAS_NPM_TOKEN != 'true'
         run: |
           echo "::notice::Release uebersprungen - Secret NPM_TOKEN fehlt." \
                "Anlegen mit: gh secret set NPM_TOKEN"
