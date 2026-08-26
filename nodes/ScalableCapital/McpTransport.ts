@@ -37,8 +37,12 @@ export class McpSession {
 		if (this.bearer) return this.bearer;
 
 		const c = await this.ctx.getCredentials(this.credentialType);
-		const refreshToken = (c.refreshToken as string) ?? '';
-		const clientId = (c.clientId as string) ?? '';
+		// Trim: a pasted value often carries a trailing newline or space, and the
+		// server then rejects it as an unknown client - which reads like a wrong
+		// id rather than a copy artefact.
+		const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+		const refreshToken = str(c.refreshToken);
+		const clientId = str(c.clientId);
 
 		if (refreshToken && clientId) {
 			const body = new URLSearchParams({
@@ -55,7 +59,7 @@ export class McpSession {
 			try {
 				raw = (await this.ctx.helpers.httpRequest({
 					method: 'POST',
-					url: (c.tokenUrl as string) || 'https://mcp.scalable.capital/token',
+					url: str(c.tokenUrl) || 'https://mcp.scalable.capital/token',
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 					body,
 				})) as string;
@@ -67,7 +71,7 @@ export class McpSession {
 				const detail = errorDetail(error);
 				throw new NodeOperationError(
 					this.ctx.getNode(),
-					`Token refresh rejected by ${(c.tokenUrl as string) || 'the token endpoint'}: ${detail}`,
+					`Token refresh rejected by ${str(c.tokenUrl) || 'the token endpoint'}: ${detail}`,
 				);
 			}
 
@@ -84,7 +88,7 @@ export class McpSession {
 			return this.bearer;
 		}
 
-		const accessToken = (c.accessToken as string) ?? '';
+		const accessToken = str(c.accessToken);
 		if (!accessToken) {
 			throw new NodeOperationError(
 				this.ctx.getNode(),

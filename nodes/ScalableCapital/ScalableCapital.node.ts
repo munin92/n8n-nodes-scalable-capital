@@ -126,7 +126,12 @@ export class ScalableCapital implements INodeType {
 				this: ICredentialTestFunctions,
 				credential: ICredentialsDecrypted,
 			): Promise<INodeCredentialTestResult> {
-				const data = (credential.data ?? {}) as Record<string, string>;
+				const raw = (credential.data ?? {}) as Record<string, string>;
+				// Same trim as the transport: a trailing newline in a pasted client id
+				// comes back as invalid_client, which looks like a wrong value.
+				const data = Object.fromEntries(
+					Object.entries(raw).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v]),
+				) as Record<string, string>;
 				if (!data.accessToken && !(data.clientId && data.refreshToken)) {
 					return {
 						status: 'Error',
