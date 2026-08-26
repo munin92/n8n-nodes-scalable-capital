@@ -135,6 +135,18 @@ Once published, `npx @n8n/scan-community-package @munin92/n8n-nodes-scalable-cap
 runs n8n's own security scan. It resolves the package from the registry, so it
 cannot be run against a working copy.
 
+## Releases
+
+Versioning and `CHANGELOG.md` are driven by [semantic-release](https://semantic-release.gitbook.io)
+from Conventional Commit messages: `fix:` bumps the patch, `feat:` the minor,
+`BREAKING CHANGE:` the major. While the version stays on `0.x`, a `feat:` bumps
+the minor rather than declaring 1.0 — the node has not been verified against a
+live account yet, so claiming a stable major would be untrue.
+
+The `Release` workflow publishes on every push to `main` and needs an `NPM_TOKEN`
+repository secret with publish rights for the `@munin92` scope. Do not hand-edit
+the version in `package.json`; semantic-release owns it.
+
 ## License
 
 [MIT](LICENSE)
