@@ -8,6 +8,11 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+# Auf Workflow-Ebene, damit `if: env.NPM_TOKEN != ''` in den Schritten greift -
+# im Job-`if` ist der secrets-Kontext nicht verfuegbar.
+env:
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
 permissions:
   contents: write
   issues: write
@@ -32,7 +37,15 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm test
       - run: npm run build
-      - run: npx semantic-release
+      - name: Release
+        if: env.NPM_TOKEN != ''
+        run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Kein NPM_TOKEN hinterlegt
+        if: env.NPM_TOKEN == ''
+        run: |
+          echo "::notice::Release uebersprungen - Secret NPM_TOKEN fehlt." \
+               "Anlegen mit: gh secret set NPM_TOKEN"
+
