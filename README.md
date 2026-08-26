@@ -88,12 +88,29 @@ ever appear in your own console.
 | Field | |
 | --- | --- |
 | Client ID | from the script |
-| Refresh Token | from the script — the node exchanges it for a fresh access token on every run |
-| Access Token | leave empty when you have a refresh token; a pasted one expires within the hour |
+| Refresh Token | from the script — **the seed only**, see below |
+| Access Token | leave empty when you have a refresh token |
 | MCP Endpoint | `https://mcp.scalable.capital/mcp` |
 
 Use **Test** in the credential: it performs the refresh and a real `initialize`
 against the MCP server, so a green result means the whole chain works.
+
+### Refresh token rotation
+
+This server issues a **new** refresh token on every refresh and invalidates the
+previous one. A token stored in the credential would therefore work exactly once.
+
+The node keeps the current one in the workflow's static data; the credential
+field is only the seed. It also caches the access token until shortly before it
+expires, so a run that happens inside that window performs no refresh at all and
+burns no rotation.
+
+Two consequences worth knowing:
+
+- **One credential per workflow.** Two workflows sharing a credential each keep
+  their own static data and would invalidate each other's token.
+- **If the static data is lost**, re-run the script and paste a fresh seed. The
+  node then reports the server's own message — `invalid_grant` means exactly this.
 
 Obtain the token yourself. Scalable's CLI README is explicit:
 

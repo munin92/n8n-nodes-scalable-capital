@@ -3,6 +3,7 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
 import { PROTOCOL_VERSION, parseMcpResponse, type McpTool } from './parseResponse';
 import { errorDetail } from './errorDetail';
+import { ensureAccessToken, type TokenStore } from './tokenStore';
 
 export { PROTOCOL_VERSION, parseMcpResponse, errorDetail };
 export type { McpTool };
@@ -29,73 +30,53 @@ export class McpSession {
 	}
 
 	/**
-	 * Holt das Access-Token. Mit refreshToken wird es bei jedem Lauf frisch
-	 * getauscht - Scalable laesst n8ns Web-Rueckleitung nicht registrieren, der
-	 * Browser-Teil laeuft also einmalig ausserhalb, der Refresh hier.
+	 * Holt das Access-Token. Der rotierende Refresh-Token lebt im
+	 * Workflow-Static-Store, das Credential liefert nur den Startwert - siehe
+	 * tokenStore.ts fuer den Grund.
 	 */
 	private async token(): Promise<string> {
 		if (this.bearer) return this.bearer;
 
 		const c = await this.ctx.getCredentials(this.credentialType);
 		// Trim: a pasted value often carries a trailing newline or space, and the
-		// server then rejects it as an unknown client - which reads like a wrong
-		// id rather than a copy artefact.
+		// server then rejects it as an unknown client.
 		const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
-		const refreshToken = str(c.refreshToken);
-		const clientId = str(c.clientId);
+		const tokenUrl = str(c.tokenUrl) || 'https://mcp.scalable.capital/token';
 
-		if (refreshToken && clientId) {
-			const body = new URLSearchParams({
-				grant_type: 'refresh_token',
-				refresh_token: refreshToken,
-				client_id: clientId,
-			}).toString();
-			// No `json: true` here. It makes n8n send Content-Type application/json,
-			// which this server does not parse as a token request at all:
-			//   form-encoded -> 400 invalid_grant   ("refresh token is invalid...")
-			//   json         -> 400 invalid_request ("grant_type is required")
-			// The second is what a wrongly encoded request looks like.
-			let raw: string;
-			try {
-				raw = (await this.ctx.helpers.httpRequest({
-					method: 'POST',
-					url: str(c.tokenUrl) || 'https://mcp.scalable.capital/token',
-					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body,
-				})) as string;
-			} catch (error) {
-				// Surface the server's own error_description - "request failed with
-				// status 400" on its own says nothing about what to fix. The body
-				// sits in different places depending on how n8n wraps axios, so try
-				// each of them rather than guess one.
-				const detail = errorDetail(error);
-				throw new NodeOperationError(
-					this.ctx.getNode(),
-					`Token refresh rejected by ${str(c.tokenUrl) || 'the token endpoint'}: ${detail}`,
-				);
-			}
+		const root = this.ctx.getWorkflowStaticData('global') as Record<string, unknown>;
+		const store = ((root.scalableCapital as TokenStore) ??= {});
 
-			const parsed = (typeof raw === 'string' ? JSON.parse(raw || '{}') : raw) as {
-				access_token?: string;
-			};
-			if (!parsed?.access_token) {
-				throw new NodeOperationError(
-					this.ctx.getNode(),
-					'Token refresh returned no access_token. Get a new refresh token with scripts/get-refresh-token.mjs.',
-				);
-			}
-			this.bearer = parsed.access_token;
-			return this.bearer;
-		}
+		this.bearer = await ensureAccessToken(
+			store,
+			{
+				clientId: str(c.clientId),
+				refreshToken: str(c.refreshToken),
+				accessToken: str(c.accessToken),
+			},
+			{
+				now: () => Date.now(),
+				post: async (form) => {
+					try {
+						const raw = (await this.ctx.helpers.httpRequest({
+							method: 'POST',
+							url: tokenUrl,
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body: new URLSearchParams(form).toString(),
+						})) as string;
+						return typeof raw === 'string' ? JSON.parse(raw || '{}') : raw;
+					} catch (error) {
+						throw new NodeOperationError(
+							this.ctx.getNode(),
+							`Token refresh rejected by ${tokenUrl}: ${errorDetail(error)}`,
+						);
+					}
+				},
+			},
+		).catch((error: Error) => {
+			if (error instanceof NodeOperationError) throw error;
+			throw new NodeOperationError(this.ctx.getNode(), error.message);
+		});
 
-		const accessToken = str(c.accessToken);
-		if (!accessToken) {
-			throw new NodeOperationError(
-				this.ctx.getNode(),
-				'No credentials: set Client ID and Refresh Token (recommended), or an Access Token.',
-			);
-		}
-		this.bearer = accessToken;
 		return this.bearer;
 	}
 
