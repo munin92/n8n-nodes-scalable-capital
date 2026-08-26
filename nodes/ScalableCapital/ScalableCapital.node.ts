@@ -6,8 +6,8 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
-import type { IDataObject, JsonObject } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+import type { IDataObject, JsonObject, NodeConnectionType } from 'n8n-workflow';
 
 import { McpSession, type McpTool } from './McpTransport';
 
@@ -36,8 +36,14 @@ export class ScalableCapital implements INodeType {
 		subtitle: '={{$parameter["operation"]}}',
 		description: 'Read portfolio, market and transaction data from Scalable Capital via its official MCP endpoint',
 		defaults: { name: 'Scalable Capital' },
-		inputs: [NodeConnectionTypes.Main],
-		outputs: [NodeConnectionTypes.Main],
+		// String-Literale statt NodeConnectionTypes.Main: der Community-Lader
+		// instanziiert die Klasse mit `new`, dabei laufen die Feld-Initialisierer.
+		// n8n-workflow ist eine peerDependency, und in einem geteilten
+		// ~/.n8n/nodes liegt oft eine aeltere Kopie ohne diese Konstante - dann
+		// wirft der Zugriff einen TypeError, den n8n als "Class could not be
+		// found" meldet. Mit 1.82.0 nachgestellt.
+		inputs: ['main' as NodeConnectionType],
+		outputs: ['main' as NodeConnectionType],
 		credentials: [{ name: 'scalableCapitalMcpApi', required: true }],
 		properties: [
 			{
