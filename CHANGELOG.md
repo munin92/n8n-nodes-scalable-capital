@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.1.4...v0.2.0) (2026-08-26)
+
+
+### Features
+
+* OAuth2-Credential mit automatischer Erneuerung ([219b8c8](https://github.com/munin92/n8n-nodes-scalable-capital/commit/219b8c8e3b0a21aa631756e8e895df7784ff8fe2))
+
 ## [0.1.4](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.1.3...v0.1.4) (2026-08-26)
 
 
