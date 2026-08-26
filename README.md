@@ -56,48 +56,46 @@ Additional protection worth configuring at the CLI level (independent of n8n):
 
 ## Authentication
 
-Two credential types. **Prefer OAuth2** — an access token from this server expires
-within the hour, which stops any scheduled workflow until someone pastes a new one.
-
-### OAuth2 (recommended)
-
-Credential **Scalable Capital OAuth2 API**. n8n runs the authorization-code + PKCE
-flow itself and keeps the session alive with the refresh token. Everything except
-the client ID is prefilled from the server's own discovery document:
+Scalable Capital only registers **loopback** redirect URIs. Measured against
+their registration endpoint on 2026-08-26:
 
 ```console
-$ curl -s https://mcp.scalable.capital/.well-known/oauth-authorization-server | jq
-{ "authorization_endpoint": "https://mcp.scalable.capital/authorize",
-  "token_endpoint":         "https://mcp.scalable.capital/token",
-  "registration_endpoint":  "https://mcp.scalable.capital/register",
-  "code_challenge_methods_supported": ["S256"],
-  "token_endpoint_auth_methods_supported": ["none"],
-  "scopes_supported": ["openid", "profile", "offline_access"] }
+$ curl -sX POST https://mcp.scalable.capital/register -H 'Content-Type: application/json' \
+    -d '{"redirect_uris":["https://n8n.example.com/rest/oauth2-credential/callback"], ...}'
+{"error":"invalid_redirect_uri",
+ "error_description":"Web clients may only register exact redirect URIs from the approved SaaS allowlist."}
+
+$ ... -d '{"redirect_uris":["http://127.0.0.1:8765/callback"], ...}'
+201  {"client_id":"..."}
 ```
 
-`offline_access` is what makes the refresh possible.
+So n8n's own OAuth2 credential cannot be used: its callback is a server-side web
+URL. The browser step happens once on your machine instead, and the node handles
+the refresh — which needs no browser.
 
-The server issues client IDs through RFC 7591 dynamic registration, so register
-once and paste the result into the credential:
+### Get a refresh token (once)
 
-```console
-$ curl -sX POST https://mcp.scalable.capital/register \
-    -H 'Content-Type: application/json' \
-    -d '{"client_name":"n8n","redirect_uris":["<your n8n OAuth Redirect URL>"],
-         "grant_types":["authorization_code","refresh_token"],
-         "response_types":["code"],"token_endpoint_auth_method":"none"}'
+```bash
+node scripts/get-refresh-token.mjs
 ```
 
-Take the **OAuth Redirect URL** from the credential screen in n8n and use that exact
-value as `redirect_uris`. This is a public client — leave **Client Secret** empty.
+It registers a loopback client, opens the browser for the Scalable login, and
+prints a **Client ID** and a **Refresh Token**. It runs locally; the values only
+ever appear in your own console.
 
-### Access Token
+### Fill in the credential
 
-Credential **Scalable Capital MCP**. Paste a bearer token, for example one obtained
-with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector). Simple
-to get going, but it expires — use it to try things out, not to run a schedule.
+| Field | |
+| --- | --- |
+| Client ID | from the script |
+| Refresh Token | from the script — the node exchanges it for a fresh access token on every run |
+| Access Token | leave empty when you have a refresh token; a pasted one expires within the hour |
+| MCP Endpoint | `https://mcp.scalable.capital/mcp` |
 
-Obtain either one yourself. Scalable's CLI README is explicit:
+Use **Test** in the credential: it performs the refresh and a real `initialize`
+against the MCP server, so a green result means the whole chain works.
+
+Obtain the token yourself. Scalable's CLI README is explicit:
 
 > For security and reliability, complete login yourself rather than via an AI agent.
 

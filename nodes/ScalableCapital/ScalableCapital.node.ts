@@ -1,6 +1,9 @@
 import type {
+	ICredentialsDecrypted,
+	ICredentialTestFunctions,
 	IExecuteFunctions,
 	ILoadOptionsFunctions,
+	INodeCredentialTestResult,
 	INodeExecutionData,
 	INodePropertyOptions,
 	INodeType,
@@ -9,7 +12,7 @@ import type {
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type { IDataObject, JsonObject, NodeConnectionType } from 'n8n-workflow';
 
-import { McpSession, type McpTool } from './McpTransport';
+import { McpSession, PROTOCOL_VERSION, type McpTool } from './McpTransport';
 
 /**
  * Scalable's own CLI declares `forbid_automatic_phase_2_execution` for every
@@ -21,10 +24,6 @@ function isReadOnly(tool: McpTool): boolean | undefined {
 	if (ann && typeof ann.readOnlyHint === 'boolean') return ann.readOnlyHint;
 	if (ann && typeof ann.destructiveHint === 'boolean') return !ann.destructiveHint;
 	return undefined;
-}
-
-function credentialTypeFor(authentication: string): string {
-	return authentication === 'accessToken' ? 'scalableCapitalMcpApi' : 'scalableCapitalOAuth2Api';
 }
 
 const WRITE_HINT = /(^|[_.-])(buy|sell|cancel|trade|create|update|delete|add|remove|assign|unassign|set)([_.-]|$)/i;
@@ -49,34 +48,11 @@ export class ScalableCapital implements INodeType {
 		inputs: ['main' as NodeConnectionType],
 		outputs: ['main' as NodeConnectionType],
 		credentials: [
-			{
-				name: 'scalableCapitalMcpApi',
-				required: true,
-				displayOptions: { show: { authentication: ['accessToken'] } },
-			},
-			{
-				name: 'scalableCapitalOAuth2Api',
-				required: true,
-				displayOptions: { show: { authentication: ['oAuth2'] } },
-			},
+			// Kein deklarativer Test im Credential: es gibt zwei Wege (Refresh oder
+			// festes Token), welcher gilt, entscheidet sich erst zur Laufzeit.
+			{ name: 'scalableCapitalMcpApi', required: true, testedBy: 'scalableCapitalMcpTest' },
 		],
 		properties: [
-			{
-				displayName: 'Authentication',
-				name: 'authentication',
-				type: 'options',
-				noDataExpression: true,
-				options: [
-					{
-						name: 'OAuth2',
-						value: 'oAuth2',
-						description:
-							'n8n runs the flow and refreshes the token itself. Preferred — a pasted token expires within the hour.',
-					},
-					{ name: 'Access Token', value: 'accessToken', description: 'Paste a bearer token' },
-				],
-				default: 'oAuth2',
-			},
 			{
 				displayName: 'Operation',
 				name: 'operation',
@@ -145,11 +121,69 @@ export class ScalableCapital implements INodeType {
 	};
 
 	methods = {
+		credentialTest: {
+			async scalableCapitalMcpTest(
+				this: ICredentialTestFunctions,
+				credential: ICredentialsDecrypted,
+			): Promise<INodeCredentialTestResult> {
+				const data = (credential.data ?? {}) as Record<string, string>;
+				if (!data.accessToken && !(data.clientId && data.refreshToken)) {
+					return {
+						status: 'Error',
+						message: 'Set Client ID and Refresh Token, or an Access Token.',
+					};
+				}
+				try {
+					let bearer = data.accessToken;
+					if (data.clientId && data.refreshToken) {
+						// ICredentialTestFunctions.helpers offers only `request`; it has no
+						// httpRequest, so the deprecation rule cannot be satisfied here.
+						// eslint-disable-next-line @n8n/community-nodes/no-deprecated-workflow-functions
+						const res = (await this.helpers.request({
+							method: 'POST',
+							uri: data.tokenUrl || 'https://mcp.scalable.capital/token',
+							form: {
+								grant_type: 'refresh_token',
+								refresh_token: data.refreshToken,
+								client_id: data.clientId,
+							},
+							json: true,
+						})) as { access_token?: string };
+						if (!res?.access_token) {
+							return { status: 'Error', message: 'The token endpoint returned no access_token.' };
+						}
+						bearer = res.access_token;
+					}
+					// eslint-disable-next-line @n8n/community-nodes/no-deprecated-workflow-functions
+					await this.helpers.request({
+						method: 'POST',
+						uri: data.endpoint || 'https://mcp.scalable.capital/mcp',
+						headers: {
+							Authorization: `Bearer ${bearer}`,
+							Accept: 'application/json, text/event-stream',
+						},
+						body: {
+							jsonrpc: '2.0',
+							id: 1,
+							method: 'initialize',
+							params: {
+								protocolVersion: PROTOCOL_VERSION,
+								capabilities: {},
+								clientInfo: { name: 'n8n-credential-test', version: '0.1.0' },
+							},
+						},
+						json: true,
+					});
+					return { status: 'OK', message: 'Connected' };
+				} catch (error) {
+					return { status: 'Error', message: (error as Error).message };
+				}
+			},
+		},
 		loadOptions: {
 			async getTools(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				const type = credentialTypeFor(this.getNodeParameter('authentication', 0) as string);
-				const { endpoint } = await this.getCredentials(type);
-				const session = new McpSession(this, endpoint as string, type);
+				const { endpoint } = await this.getCredentials('scalableCapitalMcpApi');
+				const session = new McpSession(this, endpoint as string);
 				const tools = await session.listTools();
 				return tools
 					.map((tool) => ({
@@ -165,9 +199,8 @@ export class ScalableCapital implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const out: INodeExecutionData[] = [];
-		const type = credentialTypeFor(this.getNodeParameter('authentication', 0) as string);
-		const { endpoint } = await this.getCredentials(type);
-		const session = new McpSession(this, endpoint as string, type);
+		const { endpoint } = await this.getCredentials('scalableCapitalMcpApi');
+		const session = new McpSession(this, endpoint as string);
 
 		for (let i = 0; i < items.length; i++) {
 			try {

@@ -11,6 +11,7 @@ export class McpSession {
 	private nextId = 1;
 	private initialised = false;
 	private toolCache?: McpTool[];
+	private bearer?: string;
 
 	private ctx: IExecuteFunctions | ILoadOptionsFunctions;
 	private url: string;
@@ -26,10 +27,57 @@ export class McpSession {
 		this.credentialType = credentialType;
 	}
 
+	/**
+	 * Holt das Access-Token. Mit refreshToken wird es bei jedem Lauf frisch
+	 * getauscht - Scalable laesst n8ns Web-Rueckleitung nicht registrieren, der
+	 * Browser-Teil laeuft also einmalig ausserhalb, der Refresh hier.
+	 */
+	private async token(): Promise<string> {
+		if (this.bearer) return this.bearer;
+
+		const c = await this.ctx.getCredentials(this.credentialType);
+		const refreshToken = (c.refreshToken as string) ?? '';
+		const clientId = (c.clientId as string) ?? '';
+
+		if (refreshToken && clientId) {
+			const body = new URLSearchParams({
+				grant_type: 'refresh_token',
+				refresh_token: refreshToken,
+				client_id: clientId,
+			}).toString();
+			const res = (await this.ctx.helpers.httpRequest({
+				method: 'POST',
+				url: (c.tokenUrl as string) || 'https://mcp.scalable.capital/token',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body,
+				json: true,
+			})) as { access_token?: string };
+			if (!res?.access_token) {
+				throw new NodeOperationError(
+					this.ctx.getNode(),
+					'Refresh failed: the token endpoint returned no access_token. Obtain a new refresh token with scripts/get-refresh-token.mjs.',
+				);
+			}
+			this.bearer = res.access_token;
+			return this.bearer;
+		}
+
+		const accessToken = (c.accessToken as string) ?? '';
+		if (!accessToken) {
+			throw new NodeOperationError(
+				this.ctx.getNode(),
+				'No credentials: set Client ID and Refresh Token (recommended), or an Access Token.',
+			);
+		}
+		this.bearer = accessToken;
+		return this.bearer;
+	}
+
 	private async rpc(method: string, params?: Record<string, unknown>, notification = false) {
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 			Accept: 'application/json, text/event-stream',
+			Authorization: `Bearer ${await this.token()}`,
 		};
 		if (this.sessionId) headers['Mcp-Session-Id'] = this.sessionId;
 		if (this.initialised) headers['MCP-Protocol-Version'] = PROTOCOL_VERSION;
@@ -38,11 +86,14 @@ export class McpSession {
 		if (params) body.params = params;
 		if (!notification) body.id = this.nextId++;
 
-		const response = await this.ctx.helpers.httpRequestWithAuthentication.call(
-			this.ctx,
-			this.credentialType,
-			{ method: 'POST', url: this.url, headers, body, json: true, returnFullResponse: true },
-		);
+		const response = await this.ctx.helpers.httpRequest({
+			method: 'POST',
+			url: this.url,
+			headers,
+			body,
+			json: true,
+			returnFullResponse: true,
+		});
 
 		const captured = response.headers?.['mcp-session-id'] ?? response.headers?.['Mcp-Session-Id'];
 		if (typeof captured === 'string' && captured) this.sessionId = captured;

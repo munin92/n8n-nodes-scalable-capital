@@ -38,8 +38,7 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/ScalableCapitalMcpApi.credentials.js",
-      "dist/credentials/ScalableCapitalOAuth2Api.credentials.js"
+      "dist/credentials/ScalableCapitalMcpApi.credentials.js"
     ],
     "nodes": [
       "dist/nodes/ScalableCapital/ScalableCapital.node.js"
