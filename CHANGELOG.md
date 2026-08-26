@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.2...v1.0.3) (2026-08-26)
+
+
+### Bug Fixes
+
+* trim pasted credential values ([8a541de](https://github.com/munin92/n8n-nodes-scalable-capital/commit/8a541de255ce32c2b28f7bf0e70d255c16f2b84e))
+
 ## [1.0.2](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.1...v1.0.2) (2026-08-26)
 
 
