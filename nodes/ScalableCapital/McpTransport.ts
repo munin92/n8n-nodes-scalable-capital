@@ -14,10 +14,16 @@ export class McpSession {
 
 	private ctx: IExecuteFunctions | ILoadOptionsFunctions;
 	private url: string;
+	private credentialType: string;
 
-	constructor(ctx: IExecuteFunctions | ILoadOptionsFunctions, url: string) {
+	constructor(
+		ctx: IExecuteFunctions | ILoadOptionsFunctions,
+		url: string,
+		credentialType = 'scalableCapitalMcpApi',
+	) {
 		this.ctx = ctx;
 		this.url = url;
+		this.credentialType = credentialType;
 	}
 
 	private async rpc(method: string, params?: Record<string, unknown>, notification = false) {
@@ -34,7 +40,7 @@ export class McpSession {
 
 		const response = await this.ctx.helpers.httpRequestWithAuthentication.call(
 			this.ctx,
-			'scalableCapitalMcpApi',
+			this.credentialType,
 			{ method: 'POST', url: this.url, headers, body, json: true, returnFullResponse: true },
 		);
 

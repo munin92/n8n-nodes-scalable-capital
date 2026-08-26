@@ -56,21 +56,16 @@ Additional protection worth configuring at the CLI level (independent of n8n):
 
 ## Authentication
 
-Create a **Scalable Capital MCP** credential and paste an OAuth 2.1 access token.
+Two credential types. **Prefer OAuth2** — an access token from this server expires
+within the hour, which stops any scheduled workflow until someone pastes a new one.
 
-Obtain the token yourself. Scalable's README is explicit:
+### OAuth2 (recommended)
 
-> For security and reliability, complete login yourself rather than via an AI agent.
-
-The endpoint advertises standard discovery, so any OAuth 2.1 client can complete
-the flow:
+Credential **Scalable Capital OAuth2 API**. n8n runs the authorization-code + PKCE
+flow itself and keeps the session alive with the refresh token. Everything except
+the client ID is prefilled from the server's own discovery document:
 
 ```console
-$ curl -s https://mcp.scalable.capital/.well-known/oauth-protected-resource/mcp
-{"resource":"https://mcp.scalable.capital/mcp",
- "authorization_servers":["https://mcp.scalable.capital/"],
- "resource_name":"Scalable Capital MCP"}
-
 $ curl -s https://mcp.scalable.capital/.well-known/oauth-authorization-server | jq
 { "authorization_endpoint": "https://mcp.scalable.capital/authorize",
   "token_endpoint":         "https://mcp.scalable.capital/token",
@@ -80,7 +75,31 @@ $ curl -s https://mcp.scalable.capital/.well-known/oauth-authorization-server | 
   "scopes_supported": ["openid", "profile", "offline_access"] }
 ```
 
-Request `offline_access` so the token can be refreshed.
+`offline_access` is what makes the refresh possible.
+
+The server issues client IDs through RFC 7591 dynamic registration, so register
+once and paste the result into the credential:
+
+```console
+$ curl -sX POST https://mcp.scalable.capital/register \
+    -H 'Content-Type: application/json' \
+    -d '{"client_name":"n8n","redirect_uris":["<your n8n OAuth Redirect URL>"],
+         "grant_types":["authorization_code","refresh_token"],
+         "response_types":["code"],"token_endpoint_auth_method":"none"}'
+```
+
+Take the **OAuth Redirect URL** from the credential screen in n8n and use that exact
+value as `redirect_uris`. This is a public client — leave **Client Secret** empty.
+
+### Access Token
+
+Credential **Scalable Capital MCP**. Paste a bearer token, for example one obtained
+with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector). Simple
+to get going, but it expires — use it to try things out, not to run a schedule.
+
+Obtain either one yourself. Scalable's CLI README is explicit:
+
+> For security and reliability, complete login yourself rather than via an AI agent.
 
 ## Install
 

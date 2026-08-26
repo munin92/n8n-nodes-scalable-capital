@@ -23,6 +23,10 @@ function isReadOnly(tool: McpTool): boolean | undefined {
 	return undefined;
 }
 
+function credentialTypeFor(authentication: string): string {
+	return authentication === 'accessToken' ? 'scalableCapitalMcpApi' : 'scalableCapitalOAuth2Api';
+}
+
 const WRITE_HINT = /(^|[_.-])(buy|sell|cancel|trade|create|update|delete|add|remove|assign|unassign|set)([_.-]|$)/i;
 
 export class ScalableCapital implements INodeType {
@@ -44,8 +48,35 @@ export class ScalableCapital implements INodeType {
 		// found" meldet. Mit 1.82.0 nachgestellt.
 		inputs: ['main' as NodeConnectionType],
 		outputs: ['main' as NodeConnectionType],
-		credentials: [{ name: 'scalableCapitalMcpApi', required: true }],
+		credentials: [
+			{
+				name: 'scalableCapitalMcpApi',
+				required: true,
+				displayOptions: { show: { authentication: ['accessToken'] } },
+			},
+			{
+				name: 'scalableCapitalOAuth2Api',
+				required: true,
+				displayOptions: { show: { authentication: ['oAuth2'] } },
+			},
+		],
 		properties: [
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'OAuth2',
+						value: 'oAuth2',
+						description:
+							'n8n runs the flow and refreshes the token itself. Preferred — a pasted token expires within the hour.',
+					},
+					{ name: 'Access Token', value: 'accessToken', description: 'Paste a bearer token' },
+				],
+				default: 'oAuth2',
+			},
 			{
 				displayName: 'Operation',
 				name: 'operation',
@@ -116,8 +147,9 @@ export class ScalableCapital implements INodeType {
 	methods = {
 		loadOptions: {
 			async getTools(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				const { endpoint } = await this.getCredentials('scalableCapitalMcpApi');
-				const session = new McpSession(this, endpoint as string);
+				const type = credentialTypeFor(this.getNodeParameter('authentication', 0) as string);
+				const { endpoint } = await this.getCredentials(type);
+				const session = new McpSession(this, endpoint as string, type);
 				const tools = await session.listTools();
 				return tools
 					.map((tool) => ({
@@ -133,8 +165,9 @@ export class ScalableCapital implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const out: INodeExecutionData[] = [];
-		const { endpoint } = await this.getCredentials('scalableCapitalMcpApi');
-		const session = new McpSession(this, endpoint as string);
+		const type = credentialTypeFor(this.getNodeParameter('authentication', 0) as string);
+		const { endpoint } = await this.getCredentials(type);
+		const session = new McpSession(this, endpoint as string, type);
 
 		for (let i = 0; i < items.length; i++) {
 			try {
