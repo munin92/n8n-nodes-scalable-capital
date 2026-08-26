@@ -1,5 +1,5 @@
 {
-  "node": "n8n-nodes-base.scalableCapital",
+  "node": "@munin92/n8n-nodes-scalable-capital.scalableCapital",
   "nodeVersion": "1.0",
   "codexVersion": "1.0",
   "categories": ["Finance & Accounting"],

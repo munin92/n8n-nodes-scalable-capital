@@ -6,8 +6,8 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeOperationError } from 'n8n-workflow';
-import type { IDataObject } from 'n8n-workflow';
+import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
+import type { IDataObject, JsonObject } from 'n8n-workflow';
 
 import { McpSession, type McpTool } from './McpTransport';
 
@@ -29,14 +29,15 @@ export class ScalableCapital implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Scalable Capital',
 		name: 'scalableCapital',
-		icon: 'file:scalableCapital.svg',
+		icon: { light: 'file:scalableCapital.light.svg', dark: 'file:scalableCapital.dark.svg' },
 		group: ['input'],
 		version: 1,
+		usableAsTool: true,
 		subtitle: '={{$parameter["operation"]}}',
 		description: 'Read portfolio, market and transaction data from Scalable Capital via its official MCP endpoint',
 		defaults: { name: 'Scalable Capital' },
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [{ name: 'scalableCapitalMcpApi', required: true }],
 		properties: [
 			{
@@ -207,7 +208,11 @@ export class ScalableCapital implements INodeType {
 					out.push({ json: { error: (error as Error).message }, pairedItem: { item: i } });
 					continue;
 				}
-				throw error;
+				// Eigene Fehler tragen schon eine brauchbare Meldung; alles andere
+				// bekommt hier erst einen n8n-Typ.
+				throw error instanceof NodeOperationError || error instanceof NodeApiError
+					? error
+					: new NodeApiError(this.getNode(), error as JsonObject, { itemIndex: i });
 			}
 		}
 

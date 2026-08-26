@@ -121,9 +121,19 @@ about the shape of `tools/call` results.
 ```bash
 npm install
 npm run build
-npm run lint
+npm run lint     # @n8n/eslint-plugin-community-nodes, the current official ruleset
 npm test
 ```
+
+Linting uses ESLint 9 with `@n8n/eslint-plugin-community-nodes`. The older
+`eslint-plugin-n8n-nodes-base` is not used: its rules disagree with the current
+ones (it rewrites `NodeConnectionTypes.Main` to the string literal `'main'`,
+which the current plugin rejects) and its `documentationUrl` autofix mangles a
+URL into camelCase.
+
+Once published, `npx @n8n/scan-community-package @munin92/n8n-nodes-scalable-capital`
+runs n8n's own security scan. It resolves the package from the registry, so it
+cannot be run against a working copy.
 
 ## License
 

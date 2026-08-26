@@ -8,6 +8,8 @@ import type {
 export class ScalableCapitalMcpApi implements ICredentialType {
 	name = 'scalableCapitalMcpApi';
 
+	icon = { light: 'file:../nodes/ScalableCapital/scalableCapital.light.svg', dark: 'file:../nodes/ScalableCapital/scalableCapital.dark.svg' } as const;
+
 	displayName = 'Scalable Capital MCP API';
 
 	documentationUrl = 'https://github.com/munin92/n8n-nodes-scalable-capital';

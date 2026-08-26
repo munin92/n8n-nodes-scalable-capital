@@ -24,9 +24,9 @@
     "node": ">=20.15"
   },
   "scripts": {
-    "build": "tsc && node scripts/copy-icons.mjs",
+    "build": "rm -rf dist && tsc && node scripts/copy-icons.mjs",
     "dev": "tsc --watch",
-    "lint": "eslint nodes credentials --ext .ts && eslint package.json --no-eslintrc --config .eslintrc.package.js",
+    "lint": "eslint .",
     "test": "node --test --experimental-strip-types test/*.test.ts",
     "prepublishOnly": "npm run build && npm run lint && npm test"
   },
@@ -43,13 +43,12 @@
     ]
   },
   "devDependencies": {
+    "@n8n/eslint-plugin-community-nodes": "^0.30.0",
     "@types/node": "^22.10.0",
-    "@typescript-eslint/parser": "^8.18.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-n8n-nodes-base": "^1.16.3",
-    "jsonc-eslint-parser": "^3.3.0",
+    "eslint": "^9.39.5",
     "n8n-workflow": "*",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.68.0"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
