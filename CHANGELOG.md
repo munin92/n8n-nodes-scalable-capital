@@ -1,3 +1,10 @@
+## [0.1.3](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.1.2...v0.1.3) (2026-08-26)
+
+
+### Bug Fixes
+
+* package.json in den Lint aufnehmen und Autor-E-Mail ergaenzen ([6aacdd9](https://github.com/munin92/n8n-nodes-scalable-capital/commit/6aacdd99d407ce99a66aacaf6b944e501f3ab7d6))
+
 ## [0.1.2](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.1.1...v0.1.2) (2026-08-26)
 
 
