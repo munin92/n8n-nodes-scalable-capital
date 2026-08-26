@@ -1,3 +1,10 @@
+## [0.1.2](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.1.1...v0.1.2) (2026-08-26)
+
+
+### Bug Fixes
+
+* **ci:** auf npm Trusted Publishing und Node 24 umstellen ([6ba381f](https://github.com/munin92/n8n-nodes-scalable-capital/commit/6ba381f4f9128ad35058923de95bdc0b2ef2ffd3))
+
 ## [0.1.1](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.1.0...v0.1.1) (2026-08-26)
 
 
