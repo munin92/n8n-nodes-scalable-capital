@@ -45,20 +45,41 @@ export class McpSession {
 				refresh_token: refreshToken,
 				client_id: clientId,
 			}).toString();
-			const res = (await this.ctx.helpers.httpRequest({
-				method: 'POST',
-				url: (c.tokenUrl as string) || 'https://mcp.scalable.capital/token',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body,
-				json: true,
-			})) as { access_token?: string };
-			if (!res?.access_token) {
+			// No `json: true` here. It makes n8n send Content-Type application/json,
+			// which this server does not parse as a token request at all:
+			//   form-encoded -> 400 invalid_grant   ("refresh token is invalid...")
+			//   json         -> 400 invalid_request ("grant_type is required")
+			// The second is what a wrongly encoded request looks like.
+			let raw: string;
+			try {
+				raw = (await this.ctx.helpers.httpRequest({
+					method: 'POST',
+					url: (c.tokenUrl as string) || 'https://mcp.scalable.capital/token',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body,
+				})) as string;
+			} catch (error) {
+				// Surface the server's own error_description - "request failed with
+				// status 400" on its own says nothing about what to fix.
+				const payload = (error as { response?: { body?: unknown } }).response?.body;
+				const detail =
+					typeof payload === 'string' ? payload : payload ? JSON.stringify(payload) : (error as Error).message;
 				throw new NodeOperationError(
 					this.ctx.getNode(),
-					'Refresh failed: the token endpoint returned no access_token. Obtain a new refresh token with scripts/get-refresh-token.mjs.',
+					`Token refresh rejected by ${(c.tokenUrl as string) || 'the token endpoint'}: ${detail}`,
 				);
 			}
-			this.bearer = res.access_token;
+
+			const parsed = (typeof raw === 'string' ? JSON.parse(raw || '{}') : raw) as {
+				access_token?: string;
+			};
+			if (!parsed?.access_token) {
+				throw new NodeOperationError(
+					this.ctx.getNode(),
+					'Token refresh returned no access_token. Get a new refresh token with scripts/get-refresh-token.mjs.',
+				);
+			}
+			this.bearer = parsed.access_token;
 			return this.bearer;
 		}
 
