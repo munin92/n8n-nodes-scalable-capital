@@ -1,6 +1,6 @@
 {
   "name": "@munin92/n8n-nodes-scalable-capital",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "n8n community node for Scalable Capital via its official MCP endpoint. Read-only by design.",
   "keywords": [
     "n8n-community-node-package",

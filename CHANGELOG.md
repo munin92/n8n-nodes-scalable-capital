@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.1...v1.0.2) (2026-08-26)
+
+
+### Bug Fixes
+
+* dig the server's error body out of the thrown error ([ff1d66e](https://github.com/munin92/n8n-nodes-scalable-capital/commit/ff1d66e070172d66bcead86d0f3823e79a6ea8ce))
+
 ## [1.0.1](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.0...v1.0.1) (2026-08-26)
 
 
