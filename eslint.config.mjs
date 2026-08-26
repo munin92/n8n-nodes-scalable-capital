@@ -8,5 +8,12 @@ export default tseslint.config(
 		extends: [...tseslint.configs.recommended],
 		languageOptions: { parserOptions: { project: './tsconfig.json' } },
 	},
+	{
+		files: ['package.json'],
+		languageOptions: {
+			parser: tseslint.parser,
+			parserOptions: { extraFileExtensions: ['.json'], project: null },
+		},
+	},
 	n8nCommunityNodesPlugin.configs.recommended,
 );

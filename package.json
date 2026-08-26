@@ -13,7 +13,8 @@
   "license": "MIT",
   "homepage": "https://github.com/munin92/n8n-nodes-scalable-capital",
   "author": {
-    "name": "munin92"
+    "name": "munin92",
+    "email": "lippitz.marian@gmail.com"
   },
   "repository": {
     "type": "git",
