@@ -8,16 +8,11 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-# Nur ein Ja/Nein auf Workflow-Ebene, nicht das Geheimnis selbst: sonst laege
-# der npm-Token in der Umgebung JEDES Schritts, auch beim `npm ci`, das die
-# install-Skripte aller Abhaengigkeiten ausfuehrt.
-env:
-  HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
-
 permissions:
   contents: write # Tags, Releases, der Release-Commit
   issues: write # @semantic-release/github kommentiert erledigte Issues
   pull-requests: write # dasselbe fuer PRs
+  id-token: write # OIDC fuer npm Trusted Publishing - ohne das kein Publish
 
 jobs:
   release:
@@ -29,25 +24,21 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # 24 ist das aktuelle LTS und die Version, auf der n8n selbst laeuft
+          # (n8n 2.36.7 -> node v24.18.1). Bringt npm 11.17 mit, also ueber der
+          # OIDC-Grenze von 11.5.1 - kein globales npm-Update noetig.
+          node-version: 24
           cache: npm
-          # Bewusst ohne registry-url: das schriebe eine .npmrc mit
-          # ${NODE_AUTH_TOKEN}, die mit der von @semantic-release/npm kollidiert.
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm test
       - run: npm run build
+      # Kein NPM_TOKEN: @semantic-release/npm >= 13 tauscht den OIDC-Token der
+      # Action gegen ein kurzlebiges Registry-Token. Voraussetzung ist ein auf
+      # npmjs.com hinterlegter Trusted Publisher fuer dieses Repo und genau
+      # diese Workflow-Datei.
       - name: Release
-        if: env.HAS_NPM_TOKEN == 'true'
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Kein NPM_TOKEN hinterlegt
-        if: env.HAS_NPM_TOKEN != 'true'
-        run: |
-          echo "::notice::Release uebersprungen - Secret NPM_TOKEN fehlt." \
-               "Anlegen mit: gh secret set NPM_TOKEN"
-

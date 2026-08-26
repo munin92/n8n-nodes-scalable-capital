@@ -143,9 +143,22 @@ from Conventional Commit messages: `fix:` bumps the patch, `feat:` the minor,
 the minor rather than declaring 1.0 — the node has not been verified against a
 live account yet, so claiming a stable major would be untrue.
 
-The `Release` workflow publishes on every push to `main` and needs an `NPM_TOKEN`
-repository secret with publish rights for the `@munin92` scope. Do not hand-edit
-the version in `package.json`; semantic-release owns it.
+The `Release` workflow publishes on every push to `main` via npm
+[trusted publishing](https://docs.npmjs.com/trusted-publishers) — no long-lived
+token. It needs a trusted publisher configured on npmjs.com for this repository
+and the workflow file `release.yml`, and the `id-token: write` permission the
+workflow already declares. Do not hand-edit the version in `package.json`;
+semantic-release owns it.
+
+Publishing sets `provenance`, which is what n8n's own scanner checks:
+
+```console
+$ npx @n8n/scan-community-package @munin92/n8n-nodes-scalable-capital
+```
+
+Version 0.1.1 was published by hand to create the package (a trusted publisher
+can only be configured on a package that already exists), so it carries no
+attestation and will not pass that check. Every release from 0.1.2 on does.
 
 ## License
 

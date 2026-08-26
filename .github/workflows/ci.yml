@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24 # wie n8n selbst (2.36.7 -> node v24.18.1)
           cache: npm
       - run: npm ci
       - run: npm run lint
