@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.3...v1.0.4) (2026-08-26)
+
+
+### Bug Fixes
+
+* follow refresh token rotation instead of reusing a dead one ([f17c9b1](https://github.com/munin92/n8n-nodes-scalable-capital/commit/f17c9b1505199202f597cef70859b163007b6da1))
+
 ## [1.0.3](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.2...v1.0.3) (2026-08-26)
 
 
