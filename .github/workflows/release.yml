@@ -18,11 +18,11 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # 24 ist das aktuelle LTS und die Version, auf der n8n selbst laeuft
           # (n8n 2.36.7 -> node v24.18.1). Bringt npm 11.17 mit, also ueber der
