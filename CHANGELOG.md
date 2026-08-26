@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.0...v1.0.1) (2026-08-26)
+
+
+### Bug Fixes
+
+* send the token refresh form-encoded, and surface the server's error ([720dae8](https://github.com/munin92/n8n-nodes-scalable-capital/commit/720dae8373fcf7dcfc3418e7efb0b3d1002bf196))
+
 # [1.0.0](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.2.0...v1.0.0) (2026-08-26)
 
 
