@@ -2,8 +2,9 @@ import type { IExecuteFunctions, ILoadOptionsFunctions, JsonObject } from 'n8n-w
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
 import { PROTOCOL_VERSION, parseMcpResponse, type McpTool } from './parseResponse';
+import { errorDetail } from './errorDetail';
 
-export { PROTOCOL_VERSION, parseMcpResponse };
+export { PROTOCOL_VERSION, parseMcpResponse, errorDetail };
 export type { McpTool };
 
 export class McpSession {
@@ -60,10 +61,10 @@ export class McpSession {
 				})) as string;
 			} catch (error) {
 				// Surface the server's own error_description - "request failed with
-				// status 400" on its own says nothing about what to fix.
-				const payload = (error as { response?: { body?: unknown } }).response?.body;
-				const detail =
-					typeof payload === 'string' ? payload : payload ? JSON.stringify(payload) : (error as Error).message;
+				// status 400" on its own says nothing about what to fix. The body
+				// sits in different places depending on how n8n wraps axios, so try
+				// each of them rather than guess one.
+				const detail = errorDetail(error);
 				throw new NodeOperationError(
 					this.ctx.getNode(),
 					`Token refresh rejected by ${(c.tokenUrl as string) || 'the token endpoint'}: ${detail}`,

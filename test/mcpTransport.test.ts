@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { parseMcpResponse } from '../nodes/ScalableCapital/parseResponse.ts';
+import { errorDetail } from '../nodes/ScalableCapital/errorDetail.ts';
 
 test('passes a parsed JSON body through untouched', () => {
 	const body = { jsonrpc: '2.0', id: 1, result: { tools: [] } };
@@ -45,4 +46,22 @@ test('returns undefined for an empty body', () => {
 test('ignores a [DONE] sentinel', () => {
 	const sse = 'data: {"jsonrpc":"2.0","id":9,"result":{}}\n\ndata: [DONE]\n\n';
 	assert.equal(parseMcpResponse(sse, 'text/event-stream')?.id, 9);
+});
+
+test('digs the server body out of an axios-shaped error', () => {
+	const err = { message: 'Request failed with status code 400',
+		response: { data: { error: 'invalid_grant', error_description: 'Refresh token is invalid' } } };
+	const d = errorDetail(err);
+	assert.match(d, /invalid_grant/);
+	assert.match(d, /Refresh token is invalid/);
+});
+
+test('digs it out when n8n nests the axios error under cause', () => {
+	const err = { message: 'Request failed with status code 400',
+		cause: { response: { data: '{"error":"invalid_request"}' } } };
+	assert.match(errorDetail(err), /invalid_request/);
+});
+
+test('falls back to the message when there is no body', () => {
+	assert.equal(errorDetail({ message: 'boom' }), 'boom');
 });
