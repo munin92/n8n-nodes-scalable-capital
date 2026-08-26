@@ -45,7 +45,7 @@
   "devDependencies": {
     "@n8n/eslint-plugin-community-nodes": "^0.30.0",
     "@types/node": "^22.10.0",
-    "eslint": "^9.39.5",
+    "eslint": "9.29.0",
     "n8n-workflow": "*",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.68.0"
