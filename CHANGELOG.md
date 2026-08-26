@@ -1,3 +1,15 @@
+# [1.0.0](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.2.0...v1.0.0) (2026-08-26)
+
+
+* feat!: refresh tokens in the node instead of n8n's OAuth2 credential ([46ffb79](https://github.com/munin92/n8n-nodes-scalable-capital/commit/46ffb79354588600f528769f89481595f370d546))
+
+
+### BREAKING CHANGES
+
+* the scalableCapitalOAuth2Api credential is gone, and the node
+lost its Authentication selector. Both existed for half an hour and could never
+have authenticated against this server.
+
 # [0.2.0](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v0.1.4...v0.2.0) (2026-08-26)
 
 
