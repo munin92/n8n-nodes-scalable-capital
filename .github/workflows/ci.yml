@@ -19,3 +19,9 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm test
       - run: npm run build
+      # Laedt die gebaute Klasse mit require, so wie n8ns Community-Lader.
+      # Ein Fehler dabei erscheint in n8n als "Class could not be found".
+      - run: npm run test:built
+      # Der erzeugte Katalog muss zum Schnappschuss passen - sonst haette
+      # jemand tools.generated.ts von Hand angefasst.
+      - run: npm run generate && git diff --exit-code nodes/ScalableCapital/tools.generated.ts

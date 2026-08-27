@@ -27,13 +27,55 @@ is what a workflow engine can actually keep alive.
 
 ## Operations
 
-| Operation | What it does |
-| --- | --- |
-| **List Tools** | Returns the tool catalogue the server currently offers, with a `readOnly` flag |
-| **Execute Tool** | Calls one tool by name with a JSON arguments object |
+Version 2 groups the server's 39 tools into resources and gives every tool real
+fields, derived from the input schema the server publishes:
 
-The tool dropdown is populated live from `tools/list` at design time. Nothing is
-hardcoded, so a tool Scalable adds later appears without a node update.
+| Resource | Tools | Example |
+| --- | --- | --- |
+| Account | 3 | List Accessible Portfolios |
+| Portfolio | 6 | Get Portfolio Holdings, List Portfolio Transactions |
+| Portfolio Group | 7 | List Portfolio Groups |
+| Security | 5 | Search Securities, Get Security Quote |
+| Order | 6 | Preview Buy Order |
+| Savings Plan | 5 | List Savings Plans |
+| Watchlist | 3 | List Watchlist Items |
+| Price Alert | 3 | List Price Alerts |
+| Overnight Savings | 1 | Get Overnight Summary |
+| Advanced | — | Execute Tool, List Tools |
+
+Required arguments are ordinary fields. Optional ones sit under **Additional
+Fields**. Types come from the schema: `pageSize` is a number bounded 1..100,
+`venue` is a dropdown of `gettex`/`xetra`/`eix`, list arguments take a
+comma-separated string. Only the trading tools keep a JSON field, for the
+`oneOf` unions that describe quantity and order type — flattening those would
+mean inventing a shape the server does not accept.
+
+**Advanced** keeps the old behaviour: pick any tool by name and pass raw JSON.
+That dropdown is still filled live from `tools/list`, so a tool Scalable adds
+tomorrow is usable before this node is regenerated.
+
+### Version 1
+
+Nodes already placed in a workflow stay on version 1 and keep the raw
+`Tool Name` + `Arguments` pair. Nothing about them changes. `test/built/node.test.mjs` asserts
+that, field by field, against the built output.
+
+### Regenerating the catalogue
+
+`nodes/ScalableCapital/tools.generated.ts` is generated from
+`scripts/tools.snapshot.json`, which is a copy of the server's own `tools/list`
+reply:
+
+```console
+$ npm run generate
+39 Werkzeuge in 9 Ressourcen: …
+```
+
+To refresh the snapshot, run the node itself with **Advanced → List Tools** and
+save the result. The generator cannot fetch it: the endpoint needs OAuth, and the
+refresh token rotates on every use. If Scalable adds a tool that no resource rule
+matches, the generator **fails** rather than guessing — CI runs it and rejects a
+snapshot that drifted from the generated file.
 
 ## Safety
 
