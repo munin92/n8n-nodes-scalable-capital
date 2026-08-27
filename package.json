@@ -29,8 +29,10 @@
     "dev": "tsc --watch",
     "lint": "eslint .",
     "test": "node --test --experimental-strip-types test/*.test.ts",
-    "prepublishOnly": "npm run build && npm run lint && npm test",
-    "release": "semantic-release"
+    "prepublishOnly": "npm run build && npm run lint && npm test && npm run test:built",
+    "release": "semantic-release",
+    "generate": "node scripts/generate.mjs",
+    "test:built": "node --test test/built/*.test.mjs"
   },
   "files": [
     "dist"

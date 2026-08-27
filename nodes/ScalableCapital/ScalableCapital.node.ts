@@ -13,6 +13,8 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type { IDataObject, JsonObject, NodeConnectionType } from 'n8n-workflow';
 
 import { McpSession, PROTOCOL_VERSION, type McpTool } from './McpTransport';
+import { buildArguments, buildProperties } from './properties';
+import { TOOLS } from './tools.generated';
 
 /**
  * Scalable's own CLI declares `forbid_automatic_phase_2_execution` for every
@@ -34,7 +36,7 @@ export class ScalableCapital implements INodeType {
 		name: 'scalableCapital',
 		icon: { light: 'file:scalableCapital.light.svg', dark: 'file:scalableCapital.dark.svg' },
 		group: ['input'],
-		version: 1,
+		version: [1, 2],
 		usableAsTool: true,
 		subtitle: '={{$parameter["operation"]}}',
 		description: 'Read portfolio, market and transaction data from Scalable Capital via its official MCP endpoint',
@@ -58,6 +60,7 @@ export class ScalableCapital implements INodeType {
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
+				displayOptions: { show: { '@version': [1] } },
 				options: [
 					{
 						name: 'Execute Tool',
@@ -81,7 +84,7 @@ export class ScalableCapital implements INodeType {
 				typeOptions: { loadOptionsMethod: 'getTools' },
 				default: '',
 				required: true,
-				displayOptions: { show: { operation: ['executeTool'] } },
+				displayOptions: { show: { '@version': [1], operation: ['executeTool'] } },
 				description: 'Loaded live from the server, so a tool Scalable adds later shows up without a node update. Choose from the list or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			},
 			{
@@ -89,7 +92,7 @@ export class ScalableCapital implements INodeType {
 				name: 'toolArguments',
 				type: 'json',
 				default: '{}',
-				displayOptions: { show: { operation: ['executeTool'] } },
+				displayOptions: { show: { '@version': [1], operation: ['executeTool'] } },
 				description: 'Arguments object passed to the tool, matching its input schema',
 			},
 			{
@@ -98,7 +101,82 @@ export class ScalableCapital implements INodeType {
 				type: 'collection',
 				placeholder: 'Add option',
 				default: {},
-				displayOptions: { show: { operation: ['executeTool'] } },
+				displayOptions: { show: { '@version': [1], operation: ['executeTool'] } },
+				options: [
+					{
+						displayName: 'Allow Write Operations',
+						name: 'allowWrites',
+						type: 'boolean',
+						default: false,
+						description:
+							'Whether to permit tools that are not marked read-only. Scalable requires a separate human confirmation for trades and savings-plan changes and forbids running the confirmation step automatically — leave this off unless a human confirms each run.',
+					},
+					{
+						displayName: 'Raw Response',
+						name: 'raw',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to return the full MCP result instead of the parsed tool content',
+					},
+				],
+			},
+			// --- Version 2: echte Felder je Werkzeug -------------------------
+			// Erzeugt aus dem Werkzeugkatalog des Servers (scripts/generate.mjs).
+			// Version 1 bleibt daneben bestehen, damit bestehende Workflows
+			// weiterlaufen; neu eingefuegte Knoten bekommen 2.
+			...buildProperties(TOOLS),
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { '@version': [2], resource: ['advanced'] } },
+				options: [
+					{
+						name: 'Execute Tool',
+						value: 'executeTool',
+						description: 'Call one tool by name, with raw JSON arguments',
+						action: 'Execute a tool',
+					},
+					{
+						name: 'List Tools',
+						value: 'listTools',
+						description: 'Return the tool catalogue the server currently offers',
+						action: 'List available tools',
+					},
+				],
+				default: 'executeTool',
+			},
+			{
+				displayName: 'Tool Name or ID',
+				name: 'toolName',
+				type: 'options',
+				typeOptions: { loadOptionsMethod: 'getTools' },
+				default: '',
+				required: true,
+				displayOptions: {
+					show: { '@version': [2], resource: ['advanced'], operation: ['executeTool'] },
+				},
+				description:
+					'Loaded live from the server, so a tool Scalable adds later is reachable before this node is regenerated. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+			},
+			{
+				displayName: 'Arguments',
+				name: 'toolArguments',
+				type: 'json',
+				default: '{}',
+				displayOptions: {
+					show: { '@version': [2], resource: ['advanced'], operation: ['executeTool'] },
+				},
+				description: 'Arguments object passed to the tool, matching its input schema',
+			},
+			{
+				displayName: 'Options',
+				name: 'options',
+				type: 'collection',
+				placeholder: 'Add option',
+				default: {},
+				displayOptions: { show: { '@version': [2] } },
 				options: [
 					{
 						displayName: 'Allow Write Operations',
@@ -206,12 +284,21 @@ export class ScalableCapital implements INodeType {
 		const out: INodeExecutionData[] = [];
 		const { endpoint } = await this.getCredentials('scalableCapitalMcpApi');
 		const session = new McpSession(this, endpoint as string);
+		const version = this.getNode().typeVersion;
+
+		// Der Schreibschutz fragt den Katalog beim Server ab. Einmal je Aufruf
+		// reicht - vorher lief das je Item, und die Schleife des Sync ruft den
+		// Knoten dutzende Male auf.
+		let katalog: McpTool[] | undefined;
+		const holeKatalog = async () => (katalog ??= await session.listTools());
 
 		for (let i = 0; i < items.length; i++) {
 			try {
+				const resource =
+					version >= 2 ? (this.getNodeParameter('resource', i, 'advanced') as string) : 'advanced';
 				const operation = this.getNodeParameter('operation', i) as string;
 
-				if (operation === 'listTools') {
+				if (resource === 'advanced' && operation === 'listTools') {
 					const tools = await session.listTools();
 					out.push(
 						...tools.map((tool) => ({
@@ -222,14 +309,42 @@ export class ScalableCapital implements INodeType {
 					continue;
 				}
 
-				const toolName = this.getNodeParameter('toolName', i) as string;
 				const options = this.getNodeParameter('options', i, {}) as {
 					allowWrites?: boolean;
 					raw?: boolean;
 				};
 
+				let toolName: string;
+				let args: Record<string, unknown>;
+
+				if (version >= 2 && resource !== 'advanced') {
+					const spec = TOOLS.find((t) => t.resource === resource && t.tool === operation);
+					if (!spec) {
+						throw new NodeOperationError(
+							this.getNode(),
+							`Unknown operation "${operation}" for resource "${resource}"`,
+							{ itemIndex: i },
+						);
+					}
+					toolName = spec.tool;
+					try {
+						args = buildArguments(spec, (name, fallback) =>
+							this.getNodeParameter(name, i, fallback),
+						);
+					} catch (e) {
+						throw new NodeOperationError(this.getNode(), (e as Error).message, { itemIndex: i });
+					}
+				} else {
+					toolName = this.getNodeParameter('toolName', i) as string;
+					const rawArgs = this.getNodeParameter('toolArguments', i, '{}');
+					args =
+						typeof rawArgs === 'string'
+							? (JSON.parse(rawArgs || '{}') as Record<string, unknown>)
+							: (rawArgs as Record<string, unknown>);
+				}
+
 				if (!options.allowWrites) {
-					const tool = (await session.listTools()).find((t) => t.name === toolName);
+					const tool = (await holeKatalog()).find((t) => t.name === toolName);
 					const readOnly = tool ? isReadOnly(tool) : undefined;
 					const blocked = readOnly === false || (readOnly === undefined && WRITE_HINT.test(toolName));
 					if (blocked) {
@@ -240,12 +355,6 @@ export class ScalableCapital implements INodeType {
 						);
 					}
 				}
-
-				const rawArgs = this.getNodeParameter('toolArguments', i, '{}');
-				const args =
-					typeof rawArgs === 'string'
-						? (JSON.parse(rawArgs || '{}') as Record<string, unknown>)
-						: (rawArgs as Record<string, unknown>);
 
 				const result = await session.callTool(toolName, args);
 
