@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.4...v1.1.0) (2026-08-27)
+
+
+### Features
+
+* **node:** give every tool typed fields instead of a JSON box ([37bd6b1](https://github.com/munin92/n8n-nodes-scalable-capital/commit/37bd6b148feb8d90f84e67ee9cd34c226a91b90d))
+
 ## [1.0.4](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.3...v1.0.4) (2026-08-26)
 
 
