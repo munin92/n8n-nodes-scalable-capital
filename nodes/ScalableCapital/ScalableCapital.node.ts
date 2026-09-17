@@ -13,6 +13,7 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type { IDataObject, JsonObject, NodeConnectionType } from 'n8n-workflow';
 
 import { McpSession, PROTOCOL_VERSION, type McpTool } from './McpTransport';
+import { credentialWriteBackRequest } from './credentialWriteBack';
 import { buildArguments, buildProperties } from './properties';
 import { TOOLS } from './tools.generated';
 
@@ -216,6 +217,7 @@ export class ScalableCapital implements INodeType {
 						message: 'Set Client ID and Refresh Token, or an Access Token.',
 					};
 				}
+				let rotatedNote = '';
 				try {
 					let bearer = data.accessToken;
 					if (data.clientId && data.refreshToken) {
@@ -231,11 +233,38 @@ export class ScalableCapital implements INodeType {
 								client_id: data.clientId,
 							},
 							json: true,
-						})) as { access_token?: string };
+						})) as { access_token?: string; refresh_token?: string };
 						if (!res?.access_token) {
 							return { status: 'Error', message: 'The token endpoint returned no access_token.' };
 						}
 						bearer = res.access_token;
+						// The test rotates the token like any run; without the write-back the
+						// credential would be left holding a used one.
+						if (res.refresh_token && res.refresh_token !== data.refreshToken) {
+							if (!(data.n8nApiUrl && data.n8nApiKey && credential.id)) {
+								rotatedNote =
+									' The refresh token rotated; set n8n API URL and key so it is written back.';
+							} else {
+								const req = credentialWriteBackRequest(data.n8nApiUrl, data.n8nApiKey, credential.id, {
+									refreshToken: res.refresh_token,
+								});
+								try {
+									// eslint-disable-next-line @n8n/community-nodes/no-deprecated-workflow-functions
+									await this.helpers.request({
+										method: req.method,
+										uri: req.url,
+										headers: req.headers,
+										body: req.body,
+										json: true,
+									});
+								} catch (error) {
+									return {
+										status: 'Error',
+										message: `Connected, but writing the rotated refresh token back failed: ${(error as Error).message}`,
+									};
+								}
+							}
+						}
 					}
 					// eslint-disable-next-line @n8n/community-nodes/no-deprecated-workflow-functions
 					await this.helpers.request({
@@ -257,7 +286,7 @@ export class ScalableCapital implements INodeType {
 						},
 						json: true,
 					});
-					return { status: 'OK', message: 'Connected' };
+					return { status: 'OK', message: `Connected.${rotatedNote}` };
 				} catch (error) {
 					return { status: 'Error', message: (error as Error).message };
 				}

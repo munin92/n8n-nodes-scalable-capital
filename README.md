@@ -133,6 +133,8 @@ ever appear in your own console.
 | Refresh Token | from the script — **the seed only**, see below |
 | Access Token | leave empty when you have a refresh token |
 | MCP Endpoint | `https://mcp.scalable.capital/mcp` |
+| n8n API URL | optional, e.g. `http://n8n:5678` — enables the write-back below |
+| n8n API Key | optional, needs the `credential:update` scope (n8n 2.4+) |
 
 Use **Test** in the credential: it performs the refresh and a real `initialize`
 against the MCP server, so a green result means the whole chain works.
@@ -147,7 +149,25 @@ field is only the seed. It also caches the access token until shortly before it
 expires, so a run that happens inside that window performs no refresh at all and
 burns no rotation.
 
-Two consequences worth knowing:
+Static data alone is fragile: n8n saves it only after a **successful run started
+by a trigger or webhook**. A manual run, or a scheduled run that fails further
+down, rotates the token and discards the new one.
+
+**Set n8n API URL and key to close that gap.** After every rotation the node
+writes the new refresh token back into its own credential via
+`PATCH /api/v1/credentials/{id}`. It keeps a note of which credential value the
+static data came from, so a newer credential (written back, or pasted by you)
+always wins, and an `invalid_grant` on one token is retried once with the other.
+A failed write-back is logged as a warning and does not stop the run.
+
+The script can skip the copy-paste as well:
+
+```bash
+N8N_API_URL=https://n8n.example.com N8N_API_KEY=... N8N_CREDENTIAL_ID=... \
+  node scripts/get-refresh-token.mjs
+```
+
+Without the write-back, two consequences remain:
 
 - **One credential per workflow.** Two workflows sharing a credential each keep
   their own static data and would invalidate each other's token.

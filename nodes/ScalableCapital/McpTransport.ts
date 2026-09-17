@@ -4,6 +4,7 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import { PROTOCOL_VERSION, parseMcpResponse, type McpTool } from './parseResponse';
 import { errorDetail } from './errorDetail';
 import { ensureAccessToken, type TokenStore } from './tokenStore';
+import { credentialWriteBackRequest } from './credentialWriteBack';
 
 export { PROTOCOL_VERSION, parseMcpResponse, errorDetail };
 export type { McpTool };
@@ -31,8 +32,8 @@ export class McpSession {
 
 	/**
 	 * Holt das Access-Token. Der rotierende Refresh-Token lebt im
-	 * Workflow-Static-Store, das Credential liefert nur den Startwert - siehe
-	 * tokenStore.ts fuer den Grund.
+	 * Workflow-Static-Store und, mit n8n-API-Key, zusaetzlich im Credential -
+	 * siehe tokenStore.ts fuer den Grund.
 	 */
 	private async token(): Promise<string> {
 		if (this.bearer) return this.bearer;
@@ -46,6 +47,24 @@ export class McpSession {
 		const root = this.ctx.getWorkflowStaticData('global') as Record<string, unknown>;
 		const store = ((root.scalableCapital as TokenStore) ??= {});
 
+		const apiUrl = str(c.n8nApiUrl);
+		const apiKey = str(c.n8nApiKey);
+		const credentialId = this.ctx.getNode().credentials?.[this.credentialType]?.id;
+		const persist =
+			apiUrl && apiKey
+				? async (refreshToken: string) => {
+						if (!credentialId) throw new Error('the node has no saved credential id');
+						try {
+							await this.ctx.helpers.httpRequest({
+								...credentialWriteBackRequest(apiUrl, apiKey, credentialId, { refreshToken }),
+								json: true,
+							});
+						} catch (error) {
+							throw new NodeOperationError(this.ctx.getNode(), errorDetail(error));
+						}
+					}
+				: undefined;
+
 		this.bearer = await ensureAccessToken(
 			store,
 			{
@@ -55,6 +74,8 @@ export class McpSession {
 			},
 			{
 				now: () => Date.now(),
+				persist,
+				warn: (message) => this.ctx.logger.warn(message),
 				post: async (form) => {
 					try {
 						const raw = (await this.ctx.helpers.httpRequest({
