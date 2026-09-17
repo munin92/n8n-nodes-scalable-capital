@@ -12,7 +12,7 @@ import type {
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import type { IDataObject, JsonObject, NodeConnectionType } from 'n8n-workflow';
 
-import { McpSession, PROTOCOL_VERSION, type McpTool } from './McpTransport';
+import { McpSession, PROTOCOL_VERSION, errorDetail, type McpTool } from './McpTransport';
 import { credentialWriteBackRequest } from './credentialWriteBack';
 import { buildArguments, buildProperties } from './properties';
 import { TOOLS } from './tools.generated';
@@ -288,7 +288,12 @@ export class ScalableCapital implements INodeType {
 					});
 					return { status: 'OK', message: `Connected.${rotatedNote}` };
 				} catch (error) {
-					return { status: 'Error', message: (error as Error).message };
+					const message = errorDetail(error);
+					// n8n runs this test on every Save; a second Save sends the token the first test used up.
+					const hint = /invalid_grant/.test(message)
+						? ' The refresh token was already used. Get a new one with scripts/get-refresh-token.mjs.'
+						: '';
+					return { status: 'Error', message: `${message}${hint}` };
 				}
 			},
 		},

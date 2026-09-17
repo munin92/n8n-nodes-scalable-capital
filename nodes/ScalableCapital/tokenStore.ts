@@ -40,6 +40,22 @@ export interface RefreshDeps {
 	warn?(message: string): void;
 }
 
+const LEGACY_KEY = 'scalableCapital';
+
+/**
+ * Ein Store je Credential: zwei Credentials in einem Workflow verglichen sonst
+ * das eine mit dem `seed` des anderen. Einen Store aus aelteren Versionen
+ * uebernimmt das erste Credential, das ihn findet.
+ */
+export function storeFor(root: Record<string, unknown>, credentialId: string | undefined): TokenStore {
+	const key = credentialId ? `${LEGACY_KEY}:${credentialId}` : LEGACY_KEY;
+	if (root[key] === undefined && key !== LEGACY_KEY && root[LEGACY_KEY] !== undefined) {
+		root[key] = root[LEGACY_KEY];
+		delete root[LEGACY_KEY];
+	}
+	return ((root[key] as TokenStore) ??= {});
+}
+
 /**
  * Reihenfolge der Kandidaten. Das Credential gewinnt, sobald es sich seit dem
  * Schreiben des Stores geaendert hat - neu eingefuegt oder per `persist`

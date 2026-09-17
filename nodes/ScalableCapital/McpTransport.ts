@@ -3,7 +3,7 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
 import { PROTOCOL_VERSION, parseMcpResponse, type McpTool } from './parseResponse';
 import { errorDetail } from './errorDetail';
-import { ensureAccessToken, type TokenStore } from './tokenStore';
+import { ensureAccessToken, storeFor } from './tokenStore';
 import { credentialWriteBackRequest } from './credentialWriteBack';
 
 export { PROTOCOL_VERSION, parseMcpResponse, errorDetail };
@@ -44,12 +44,12 @@ export class McpSession {
 		const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 		const tokenUrl = str(c.tokenUrl) || 'https://mcp.scalable.capital/token';
 
+		const credentialId = this.ctx.getNode().credentials?.[this.credentialType]?.id ?? undefined;
 		const root = this.ctx.getWorkflowStaticData('global') as Record<string, unknown>;
-		const store = ((root.scalableCapital as TokenStore) ??= {});
+		const store = storeFor(root, credentialId);
 
 		const apiUrl = str(c.n8nApiUrl);
 		const apiKey = str(c.n8nApiKey);
-		const credentialId = this.ctx.getNode().credentials?.[this.credentialType]?.id;
 		const persist =
 			apiUrl && apiKey
 				? async (refreshToken: string) => {

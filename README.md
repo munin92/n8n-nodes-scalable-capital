@@ -160,6 +160,14 @@ static data came from, so a newer credential (written back, or pasted by you)
 always wins, and an `invalid_grant` on one token is retried once with the other.
 A failed write-back is logged as a warning and does not stop the run.
 
+Two gaps remain, both visible as `invalid_grant`:
+
+- **n8n tests the credential on every Save, and the test rotates the token.** The
+  first Save writes the new token back. Saving the still-open dialog a second time
+  sends the old token again and overwrites it. Close the dialog after one Save.
+- **A manual run whose write-back fails** keeps the new token only in memory.
+  The warning in the n8n log names it.
+
 The script can skip the copy-paste as well:
 
 ```bash

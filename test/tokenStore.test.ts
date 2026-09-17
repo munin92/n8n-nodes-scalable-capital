@@ -1,7 +1,21 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { ensureAccessToken, type TokenStore } from '../nodes/ScalableCapital/tokenStore.ts';
+import { ensureAccessToken, storeFor, type TokenStore } from '../nodes/ScalableCapital/tokenStore.ts';
+
+test('each credential gets its own store', () => {
+	const root: Record<string, unknown> = {};
+	storeFor(root, 'a').refreshToken = 'rt-a';
+	assert.equal(storeFor(root, 'b').refreshToken, undefined);
+	assert.equal(storeFor(root, 'a').refreshToken, 'rt-a');
+});
+
+test('a store from older versions is adopted once, not copied', () => {
+	const root: Record<string, unknown> = { scalableCapital: { refreshToken: 'alt' } };
+	assert.equal(storeFor(root, 'a').refreshToken, 'alt');
+	assert.equal(root.scalableCapital, undefined);
+	assert.equal(storeFor(root, 'b').refreshToken, undefined);
+});
 
 const creds = (o = {}) => ({ clientId: 'cid', refreshToken: 'seed-rt', accessToken: '', ...o });
 
