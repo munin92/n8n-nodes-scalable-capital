@@ -1,3 +1,17 @@
+# [1.2.0](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.1.0...v1.2.0) (2026-09-18)
+
+
+### Bug Fixes
+
+* **build:** migrate tsconfig to node16 for TypeScript 6 ([8292a36](https://github.com/munin92/n8n-nodes-scalable-capital/commit/8292a3636e55fdd97b0359df92f95af19d9cb2dd))
+* **build:** use nodenext instead of node16 module mode ([1241891](https://github.com/munin92/n8n-nodes-scalable-capital/commit/124189146c3646b240d9327b2c45a750b4925281))
+* **token:** keep one token store per credential ([b4a04c5](https://github.com/munin92/n8n-nodes-scalable-capital/commit/b4a04c5e6937ed96849a18f541d415e817ff423d))
+
+
+### Features
+
+* **credential:** write rotated refresh tokens back into the credential ([0d66284](https://github.com/munin92/n8n-nodes-scalable-capital/commit/0d66284dd94c08edda40cdd02f2c5915da46366e))
+
 # [1.1.0](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.0.4...v1.1.0) (2026-08-27)
 
 
