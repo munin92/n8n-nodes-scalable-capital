@@ -74,7 +74,7 @@ export class ScalableCapitalMcpApi implements ICredentialType {
 			default: '',
 			placeholder: 'http://n8n:5678',
 			description:
-				'Optional. Base URL of this n8n instance. Together with an API key, every rotated refresh token is written back into this credential, so manual and failed runs no longer lose it.',
+				'Optional. Base URL of this n8n instance, as n8n itself can reach it (e.g. the in-cluster service address). Together with an API key, every rotated refresh token is written back into this credential, so manual and failed runs no longer lose it.',
 		},
 		{
 			displayName: 'n8n API Key',
