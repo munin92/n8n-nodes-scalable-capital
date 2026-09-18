@@ -1,7 +1,21 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { ensureAccessToken, type TokenStore } from '../nodes/ScalableCapital/tokenStore.ts';
+import { ensureAccessToken, storeFor, type TokenStore } from '../nodes/ScalableCapital/tokenStore.ts';
+
+test('each credential gets its own store', () => {
+	const root: Record<string, unknown> = {};
+	storeFor(root, 'a').refreshToken = 'rt-a';
+	assert.equal(storeFor(root, 'b').refreshToken, undefined);
+	assert.equal(storeFor(root, 'a').refreshToken, 'rt-a');
+});
+
+test('a store from older versions is adopted once, not copied', () => {
+	const root: Record<string, unknown> = { scalableCapital: { refreshToken: 'alt' } };
+	assert.equal(storeFor(root, 'a').refreshToken, 'alt');
+	assert.equal(root.scalableCapital, undefined);
+	assert.equal(storeFor(root, 'b').refreshToken, undefined);
+});
 
 const creds = (o = {}) => ({ clientId: 'cid', refreshToken: 'seed-rt', accessToken: '', ...o });
 
@@ -87,6 +101,83 @@ test('missing access_token in the response is reported, not swallowed', async ()
 		ensureAccessToken({}, creds(), { post: f.post, now: () => 0 }),
 		/no access_token/,
 	);
+});
+
+test('a rotated token is written back and becomes the new seed', async () => {
+	const store: TokenStore = {};
+	const f = fakePost([{ access_token: 'at-1', refresh_token: 'rt-2', expires_in: 1200 }]);
+	const persisted: string[] = [];
+	await ensureAccessToken(store, creds(), {
+		post: f.post,
+		now: () => 0,
+		persist: async (rt) => void persisted.push(rt),
+	});
+	assert.deepEqual(persisted, ['rt-2']);
+	assert.equal(store.seed, 'rt-2');
+});
+
+test('a failed write-back warns, keeps the run alive and the token in the store', async () => {
+	const store: TokenStore = {};
+	const f = fakePost([{ access_token: 'at-1', refresh_token: 'rt-2', expires_in: 1200 }]);
+	const warnings: string[] = [];
+	const at = await ensureAccessToken(store, creds(), {
+		post: f.post,
+		now: () => 0,
+		persist: async () => {
+			throw new Error('401');
+		},
+		warn: (m) => void warnings.push(m),
+	});
+	assert.equal(at, 'at-1');
+	assert.equal(store.refreshToken, 'rt-2');
+	assert.equal(store.seed, 'seed-rt', 'seed bleibt der Credential-Wert, damit der Store gewinnt');
+	assert.match(warnings[0], /401/);
+});
+
+test('a credential changed since the store was written wins over the store', async () => {
+	// Handlauf: Rueckschrieb gelang (Credential rt-3), der Store blieb auf rt-2.
+	const store: TokenStore = { refreshToken: 'rt-2', seed: 'rt-2' };
+	const f = fakePost([{ access_token: 'at-3', refresh_token: 'rt-4', expires_in: 1200 }]);
+	await ensureAccessToken(store, creds({ refreshToken: 'rt-3' }), { post: f.post, now: () => 0 });
+	assert.equal(f.calls[0].refresh_token, 'rt-3');
+});
+
+test('an unchanged credential leaves the store in front', async () => {
+	const store: TokenStore = { refreshToken: 'rt-3', seed: 'seed-rt' };
+	const f = fakePost([{ access_token: 'at-3', refresh_token: 'rt-4', expires_in: 1200 }]);
+	await ensureAccessToken(store, creds(), { post: f.post, now: () => 0 });
+	assert.equal(f.calls[0].refresh_token, 'rt-3');
+});
+
+test('invalid_grant on the store token falls back to the credential once', async () => {
+	// Store aus aelterer Version ohne seed, frisch eingefuegtes Credential.
+	const store: TokenStore = { refreshToken: 'tot' };
+	const calls: string[] = [];
+	const at = await ensureAccessToken(store, creds({ refreshToken: 'neu' }), {
+		now: () => 0,
+		post: async (form) => {
+			calls.push(form.refresh_token);
+			if (form.refresh_token === 'tot') throw new Error('{"error":"invalid_grant"}');
+			return { access_token: 'at-neu', refresh_token: 'rt-neu', expires_in: 1200 };
+		},
+	});
+	assert.deepEqual(calls, ['tot', 'neu']);
+	assert.equal(at, 'at-neu');
+});
+
+test('other refresh errors are not retried with the second token', async () => {
+	const calls: string[] = [];
+	await assert.rejects(
+		ensureAccessToken({ refreshToken: 'rt-2' }, creds(), {
+			now: () => 0,
+			post: async (form) => {
+				calls.push(form.refresh_token);
+				throw new Error('ECONNRESET');
+			},
+		}),
+		/ECONNRESET/,
+	);
+	assert.deepEqual(calls, ['rt-2']);
 });
 
 test('no credentials at all is an explicit error', async () => {

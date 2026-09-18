@@ -60,6 +60,13 @@ appearing configured.
 previous one. The credential field is a seed; the live token lives in the
 workflow's static data. A credential therefore belongs to exactly one workflow.
 
+**Static data is saved only after a successful trigger or webhook run.** Manual
+runs and failed runs throw the rotated token away (2026-09-17, `invalid_grant`).
+With n8n API URL and key in the credential, the node writes each rotated token
+back through the public API. `TokenStore.seed` records which credential value
+the store was written from; test a change to that precedence against both
+orders — store newer and credential newer.
+
 ## Commits and releases
 
 Conventional Commits — semantic-release reads them and every push to `main`

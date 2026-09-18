@@ -67,5 +67,22 @@ export class ScalableCapitalMcpApi implements ICredentialType {
 			type: 'string',
 			default: 'https://mcp.scalable.capital/token',
 		},
+		{
+			displayName: 'n8n API URL',
+			name: 'n8nApiUrl',
+			type: 'string',
+			default: '',
+			placeholder: 'http://n8n:5678',
+			description:
+				'Optional. Base URL of this n8n instance. Together with an API key, every rotated refresh token is written back into this credential, so manual and failed runs no longer lose it.',
+		},
+		{
+			displayName: 'n8n API Key',
+			name: 'n8nApiKey',
+			type: 'string',
+			typeOptions: { password: true },
+			default: '',
+			description: 'Optional. Needs the credential:update scope. Leave empty to keep the token only in the workflow static data.',
+		},
 	];
 }
