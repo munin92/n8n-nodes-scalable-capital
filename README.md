@@ -133,11 +133,16 @@ ever appear in your own console.
 | Refresh Token | from the script — **the seed only**, see below |
 | Access Token | leave empty when you have a refresh token |
 | MCP Endpoint | `https://mcp.scalable.capital/mcp` |
-| n8n API URL | optional, e.g. `http://n8n:5678` — enables the write-back below |
+| n8n API URL | optional — enables the write-back below. An address **n8n itself** can reach, such as the in-cluster service `http://n8n.my-namespace.svc.cluster.local:5678`. A public URL may sit behind a login proxy that answers the API with a redirect instead of data. |
 | n8n API Key | optional, needs the `credential:update` scope (n8n 2.4+) |
 
 Use **Test** in the credential: it performs the refresh and a real `initialize`
-against the MCP server, so a green result means the whole chain works.
+against the MCP server, so a green result means the whole chain works. Note that
+this consumes one rotation, like any other refresh — see below.
+
+Order matters when you use the write-back: save the credential once with the API
+URL and key, then run the script with `N8N_CREDENTIAL_ID` (the id in the address
+bar while the credential is open) so it writes the fresh token straight into it.
 
 ### Refresh token rotation
 
@@ -174,6 +179,10 @@ The script can skip the copy-paste as well:
 N8N_API_URL=https://n8n.example.com N8N_API_KEY=... N8N_CREDENTIAL_ID=... \
   node scripts/get-refresh-token.mjs
 ```
+
+The script runs on your machine, so this URL has to be reachable from there. If
+the API is only open inside the cluster, tunnel it first (`kubectl port-forward
+svc/n8n 5678`) and point `N8N_API_URL` at `http://127.0.0.1:5678`.
 
 Without the write-back, two consequences remain:
 
