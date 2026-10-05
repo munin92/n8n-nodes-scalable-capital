@@ -92,16 +92,22 @@ if (!tok.refresh_token) {
 const { N8N_API_URL, N8N_API_KEY, N8N_CREDENTIAL_ID } = process.env;
 if (N8N_API_URL && N8N_API_KEY && N8N_CREDENTIAL_ID) {
 	const base = N8N_API_URL.trim().replace(/\/+$/, '').replace(/\/api\/v1$/, '');
-	const res = await fetch(`${base}/api/v1/credentials/${encodeURIComponent(N8N_CREDENTIAL_ID)}`, {
-		method: 'PATCH',
-		headers: { 'X-N8N-API-KEY': N8N_API_KEY.trim(), 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			data: { clientId: reg.client_id, refreshToken: tok.refresh_token },
-			isPartialData: true,
-		}),
-	});
-	if (!res.ok) {
-		console.error(`\nn8n hat das Credential nicht angenommen: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+	// Der Login ist schon verbraucht: jeder Fehler hier muss bei der Ausgabe unten landen, nie im Absturz.
+	let res;
+	try {
+		res = await fetch(`${base}/api/v1/credentials/${encodeURIComponent(N8N_CREDENTIAL_ID)}`, {
+			method: 'PATCH',
+			headers: { 'X-N8N-API-KEY': N8N_API_KEY.trim(), 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				data: { clientId: reg.client_id, refreshToken: tok.refresh_token },
+				isPartialData: true,
+			}),
+		});
+	} catch (error) {
+		console.error(`\nn8n nicht erreicht: ${error?.message ?? error}`);
+	}
+	if (!res?.ok) {
+		if (res) console.error(`\nn8n hat das Credential nicht angenommen: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
 		console.error('Werte stattdessen von Hand eintragen:');
 	} else {
 		console.log(`\nCredential ${N8N_CREDENTIAL_ID} in n8n aktualisiert (HTTP ${res.status}). Nichts weiter zu tun.`);
