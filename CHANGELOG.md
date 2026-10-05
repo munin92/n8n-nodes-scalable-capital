@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.2.0...v1.2.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **script:** print the refresh token when the credential write-back throws ([77a42e3](https://github.com/munin92/n8n-nodes-scalable-capital/commit/77a42e337e0bcdc1f570960b2fa730ba9c243854))
+
 # [1.2.0](https://github.com/munin92/n8n-nodes-scalable-capital/compare/v1.1.0...v1.2.0) (2026-09-18)
 
 
